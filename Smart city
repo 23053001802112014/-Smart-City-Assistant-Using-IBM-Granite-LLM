@@ -1,0 +1,89 @@
+ smart_city_assistant/
+│── backend/
+│   ├── main.py
+│   ├── routers/
+│   │   ├── feedback_router.py
+│   │   ├── kpi_file_forecaster.py
+│   │   └── granite_llm.py
+│   └── utils/
+│       ├── pinecone_client.py
+│       └── ml_models.py
+│
+│── frontend/
+│   ├── app.py
+│   ├── pages/
+│   │   ├── Dashboard.py
+│   │   ├── Feedback.py
+│   │   ├── EcoTips.py
+│   │   ├── Chat.py
+│   │   ├── PolicySearch.py
+│   │   └── KPIForecasting.py
+│
+│── requirements.txt
+│── .env
+[9/17, 12:06 PM] ʀᴏꜱᴇʏʏʏ: from fastapi import FastAPI
+from routers import feedback_router, kpi_file_forecaster, granite_llm
+app = FastAPI(title="Smart City Assistant Backend")
+# Include routers
+app.include_router(feedback_router.router, prefix="/feedback", tags=["Feedback"])
+app.include_router(kpi_file_forecaster.router, prefix="/kpi", tags=["KPI Forecast"])
+app.include_router(granite_llm.router, prefix="/llm", tags=["Watsonx LLM"])
+@app.get("/")
+def home():
+    return {"message": "Smart City Assistant Backend is running!"}
+[9/17, 12:14 PM] ʀᴏꜱᴇʏʏʏ: import streamlit as st
+from streamlit_option_menu import option_menu
+st.set_page_config(page_title="Smart City Assistant", layout="wide")
+# Sidebar navigation
+with st.sidebar:
+    selected = option_menu(
+        "Smart City Assistant",
+        ["Dashboard", "Feedback", "Eco Tips", "Chat", "Policy Search", "KPI Forecasting"],
+        icons=["house", "chat", "leaf", "robot", "book", "bar-chart"],
+        menu_icon="cast",
+        default_index=0,
+    )
+# Page routing
+if selected == "Dashboard":
+    st.title("City Dashboard")
+    st.write("Overview of KPIs and sustainability metrics.")
+elif selected == "Feedback":
+    st.title("Citizen Feedback")
+    st.text_input("Describe the issue:")
+elif selected == "Chat":
+    st.title("AI Chat Assistant")
+    st.text_input("Ask your question:")
+[9/17, 12:15 PM] ʀᴏꜱᴇʏʏʏ: from fastapi import APIRouter
+import os
+import requests
+router = APIRouter()
+WATSONX_API_KEY = os.getenv("WATSONX_API_KEY")
+@router.post("/chat")
+def chat_with_llm(prompt: str):
+    # Example mock response (replace with real Watsonx Granite API call)
+    response = {
+        "user_prompt": prompt,
+        "ai_response": f"Mock response for: {prompt}"
+    }
+    return response
+[9/17, 12:15 PM] ʀᴏꜱᴇʏʏʏ: from fastapi import APIRouter, UploadFile
+import pandas as pd
+from utils.ml_models import forecast_kpi
+router = APIRouter()
+@router.post("/forecast")
+async def forecast_kpi_file(file: UploadFile):
+    df = pd.read_csv(file.file)
+    prediction = forecast_kpi(df)
+    return {"forecast": prediction}
+from sklearn.linear_model import LinearRegression
+import numpy as np
+def forecast_kpi(df: pd.DataFrame):
+    if "Year" not in df.columns or "Value" not in df.columns:
+        return "Invalid CSV format. Required columns: Year, Value"
+     X = df[["Year"]].values
+    y = df["Value"].values
+    model = LinearRegression()
+    model.fit(X, y)
+    next_year = np.array([[df["Year"].max() + 1]])
+    forecast = model.predict(next_year)
+    return {"next_year": int(next_year[0][0]), "predicted_value": float(forecast[0])}
